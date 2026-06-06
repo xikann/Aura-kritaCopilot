@@ -1,0 +1,23 @@
+# 编译文件
+__pycache__/
+*.pyc
+*.pyo
+
+# 模型权重文件 (GitHub 限制单文件最大 100MB，切勿上传)
+*.ckpt
+*.pt
+*.pth
+*.onnx
+*.safetensors
+
+# Krita 插件相关临时文件
+ai_copilot/__pycache__/
+
+# Python 虚拟环境 (如果有的话)
+venv/
+.env/
+
+# IDE 和系统配置文件
+.vscode/
+.idea/
+.DS_Store

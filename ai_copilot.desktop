@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=Krita/PythonPlugin
+X-KDE-Library=ai_copilot
+X-Krita-Manual=Manual.html
+X-Python-2-Compatible=false
+Name=AI Copilot
+Comment=AI Copilot 停靠面板，实现前后端文字通信。
