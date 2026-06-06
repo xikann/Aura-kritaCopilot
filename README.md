@@ -4,12 +4,11 @@
  /\_/\  
 ( ovo ) 
 ```
-
-Aura is an AI copilot plugin for Krita. It helps you quickly process line art and add flat colors using AI models running on a local backend.
-
+一个为krita设计的ai助手插件，可以通过一些简单的命令为线稿一键上色，以及完成一些基础的软件操作（如删去空白图层，添加新的命名图层，调整笔刷和橡皮大小。）
 ## Features
 - **Perfect for messy sketches for anime style **:however in some situation like excessively broken or unclosed sketch lines, its colored regions may shrink inward/ or in unfilled inner spaces with ambiguous structure, the flating color may unintendedly overflow.
 such gaps and overflow can be obvious to to fix manually, ((so just use it!)
+
 ## Folders
 - `ai_copilot/`: The Krita UI plugin folder.
 - `server.py`: The backend engine (runs with FastAPI).
