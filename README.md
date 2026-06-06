@@ -2,17 +2,14 @@
 
 ```text
  /\_/\  
-( o.o ) 
- > ^ <
+( ovo ) 
 ```
 
 Aura is an AI copilot plugin for Krita. It helps you quickly process line art and add flat colors using AI models running on a local backend.
 
 ## Features
-- **Perfect for messy sketches**: It works great with messy, broken, or unclosed sketch lines.
-- **No more color leaking**: We completely removed the old Watershed algorithm.
-- **Smart Edge Snapping**: We use a math method called "Guided Filter" to make the AI flat colors perfectly stick to your sketch lines!
-
+- **Perfect for messy sketches for anime style **:however in some situation like excessively broken or unclosed sketch lines, its colored regions may shrink inward/ or in unfilled inner spaces with ambiguous structure, the flating color may unintendedly overflow.
+such gaps and overflow can be obvious to to fix manually, ((so just use it!)
 ## Folders
 - `ai_copilot/`: The Krita UI plugin folder.
 - `server.py`: The backend engine (runs with FastAPI).
