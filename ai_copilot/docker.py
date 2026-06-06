@@ -159,6 +159,11 @@ class AICopilotDocker(DockWidget):
                     if action == "create_layer":
                         target_name = response_json.get("target_name", "新建图层")
                         self.execute_create_layer(target_name)
+                    elif action == "delete_empty_layers":
+                        self.execute_delete_empty_layers()
+                    elif action == "resize_brush":
+                        direction = response_json.get("direction", "up")
+                        self.execute_resize_brush(direction)
                     elif action == "flat_color":
                         target_color = response_json.get("target_color", "#FF6B6B")
                         self.flat_color_selection(target_color)
@@ -189,6 +194,59 @@ class AICopilotDocker(DockWidget):
             self.append_message("AI", "已新建图层: '{}'".format(target_name))
         except Exception as e:
             self.append_message("系统", "新建图层失败: {}".format(str(e)))
+
+    def execute_delete_empty_layers(self):
+        try:
+            from krita import Krita
+            doc = Krita.instance().activeDocument()
+            if not doc:
+                self.append_message("系统", "执行失败：未找到活跃文档。")
+                return
+                
+            def remove_empty(node):
+                removed_count = 0
+                children = node.childNodes()
+                for child in children:
+                    if child.type() == "paintlayer":
+                        bounds = child.exactBounds()
+                        if bounds.width() == 0 or bounds.height() == 0:
+                            node.removeChildNode(child)
+                            removed_count += 1
+                    elif child.type() == "grouplayer":
+                        removed_count += remove_empty(child)
+                return removed_count
+                
+            count = remove_empty(doc.rootNode())
+            doc.refreshProjection()
+            if count > 0:
+                self.append_message("AI", f"清理完毕，成功删除了 {count} 个完全空白的图层！")
+            else:
+                self.append_message("AI", "扫描完毕，当前文档中没有空图层哦。")
+        except Exception as e:
+            self.append_message("系统", "删除空图层失败: {}".format(str(e)))
+
+    def execute_resize_brush(self, direction):
+        try:
+            from krita import Krita
+            action_name = 'increase_brush_size' if direction == 'up' else 'decrease_brush_size'
+            action = Krita.instance().action(action_name)
+            if action:
+                # 循环触发几次，因为单击一次调整幅度较小
+                for _ in range(10):
+                    action.trigger()
+                self.append_message("AI", f"已帮您{'放大' if direction == 'up' else '缩小'}笔刷！")
+            else:
+                # 尝试备用动作名
+                fallback_name = 'KritaToolSizeIncrease' if direction == 'up' else 'KritaToolSizeDecrease'
+                fallback_action = Krita.instance().action(fallback_name)
+                if fallback_action:
+                    for _ in range(10):
+                        fallback_action.trigger()
+                    self.append_message("AI", f"已帮您{'放大' if direction == 'up' else '缩小'}笔刷！")
+                else:
+                    self.append_message("系统", "找不到笔刷调整动作指令，可能是 Krita 版本差异或快捷键未绑定。")
+        except Exception as e:
+            self.append_message("系统", "调整笔刷失败: {}".format(str(e)))
 
     def flat_color_selection(self, target_color="#FF6B6B"):
         try:

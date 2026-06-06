@@ -315,6 +315,26 @@ def chat(request: ChatRequest):
             "target_name": target_name
         }
     
+    if "删" in prompt and "空" in prompt and "图层" in prompt:
+        return {
+            "reply": "好的，正在为您扫描并删除文档中所有的空图层...",
+            "action": "delete_empty_layers"
+        }
+        
+    if ("放大" in prompt or "大一点" in prompt) and "笔刷" in prompt:
+        return {
+            "reply": "收到，正在为您放大笔刷...",
+            "action": "resize_brush",
+            "direction": "up"
+        }
+        
+    if ("缩小" in prompt or "小一点" in prompt) and "笔刷" in prompt:
+        return {
+            "reply": "收到，正在为您缩小笔刷...",
+            "action": "resize_brush",
+            "direction": "down"
+        }
+    
     if any(w in prompt for w in ["铺底", "底色", "平铺", "铺色"]):
         intent = parse_intent_local(prompt)
         color_hex = intent.get("color_hex", "#FF6B6B")
