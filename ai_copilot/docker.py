@@ -212,7 +212,7 @@ class AICopilotDocker(DockWidget):
                         continue
                         
                     if child.type() == "paintlayer":
-                        bounds = child.exactBounds()
+                        bounds = child.bounds()
                         if bounds.isEmpty() or bounds.width() == 0 or bounds.height() == 0:
                             node.removeChildNode(child)
                             removed_count += 1
