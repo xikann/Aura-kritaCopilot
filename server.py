@@ -315,7 +315,10 @@ def chat(request: ChatRequest):
             "target_name": target_name
         }
     
-    if "删" in prompt and any(k in prompt for k in ["空", "杂点", "没用", "多余"]):
+    delete_keywords = ["删", "清", "除", "去掉", "干掉"]
+    empty_keywords = ["空", "杂点", "没用", "多余"]
+    
+    if any(d in prompt for d in delete_keywords) and any(e in prompt for e in empty_keywords):
         return {
             "reply": "好的，正在为您扫描并清理文档中所有的空图层和极微小杂点图层...",
             "action": "cleanup_layers"
