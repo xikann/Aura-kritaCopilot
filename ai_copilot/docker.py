@@ -8,7 +8,7 @@ from krita import DockWidget
 class AICopilotDocker(DockWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("AI Copilot")
+        self.setWindowTitle("Aura Copilot")
         
         # 主 Widget
         self.main_widget = QWidget(self)
@@ -20,7 +20,7 @@ class AICopilotDocker(DockWidget):
         self.layout.setSpacing(8)
         
         # 顶部标题栏
-        self.header = QLabel("AI Copilot", self.main_widget)
+        self.header = QLabel("Aura Copilot", self.main_widget)
         self.header.setStyleSheet("font-weight: bold; font-size: 13px; color: #89b4fa;")
         self.layout.addWidget(self.header)
         
@@ -95,7 +95,7 @@ class AICopilotDocker(DockWidget):
         # 记录最近选区的局部坐标
         self.last_selection_coords = None
         
-        self.append_message("AI", "AI Copilot 已就绪。输入指令即可（铺底色、新建图层等）")
+        self.append_message("Aura", "Aura Copilot 已就绪。输入指令即可（铺底色、清理图层等）")
 
     def canvasChanged(self, canvas):
         pass
@@ -104,8 +104,8 @@ class AICopilotDocker(DockWidget):
         html_text = text.replace('\n', '<br>')
         if sender == "我":
             msg_html = '<p align="right" style="margin: 4px 0;"><font color="#89b4fa"><b>我：</b></font><font color="#cdd6f4">{}</font></p>'.format(html_text)
-        elif sender == "AI":
-            msg_html = '<p align="left" style="margin: 4px 0;"><font color="#a6e3a1"><b>AI：</b></font><font color="#cdd6f4">{}</font></p>'.format(html_text)
+        elif sender == "Aura":
+            msg_html = '<p align="left" style="margin: 4px 0;"><font color="#a6e3a1"><b>Aura：</b></font><font color="#cdd6f4">{}</font></p>'.format(html_text)
         else:
             msg_html = '<p align="center" style="margin: 4px 0;"><font color="#f38ba8"><i>[ {} ]</i></font></p>'.format(html_text)
         self.chat_history.append(msg_html)
@@ -153,14 +153,14 @@ class AICopilotDocker(DockWidget):
                     response_str = str(response_bytes, "utf-8")
                     response_json = json.loads(response_str)
                     reply_text = response_json.get("reply", "")
-                    self.append_message("AI", reply_text)
+                    self.append_message("Aura", reply_text)
                     
                     action = response_json.get("action")
                     if action == "create_layer":
                         target_name = response_json.get("target_name", "新建图层")
                         self.execute_create_layer(target_name)
-                    elif action == "delete_empty_layers":
-                        self.execute_delete_empty_layers()
+                    elif action == "cleanup_layers":
+                        self.execute_cleanup_layers()
                     elif action == "resize_brush":
                         direction = response_json.get("direction", "up")
                         self.execute_resize_brush(direction)
@@ -191,11 +191,11 @@ class AICopilotDocker(DockWidget):
                 doc.rootNode().addChildNode(new_layer, None)
             
             doc.refreshProjection()
-            self.append_message("AI", "已新建图层: '{}'".format(target_name))
+            self.append_message("Aura", "已新建图层: '{}'".format(target_name))
         except Exception as e:
             self.append_message("系统", "新建图层失败: {}".format(str(e)))
 
-    def execute_delete_empty_layers(self):
+    def execute_cleanup_layers(self):
         try:
             from krita import Krita
             doc = Krita.instance().activeDocument()
@@ -203,27 +203,48 @@ class AICopilotDocker(DockWidget):
                 self.append_message("系统", "执行失败：未找到活跃文档。")
                 return
                 
-            def remove_empty(node):
+            def remove_noise(node):
                 removed_count = 0
-                children = node.childNodes()
+                stray_count = 0
+                children = node.childNodes()[:] # 拷贝一份列表以安全删除
                 for child in children:
+                    if child.locked():
+                        continue
+                        
                     if child.type() == "paintlayer":
                         bounds = child.exactBounds()
-                        if bounds.width() == 0 or bounds.height() == 0:
+                        if bounds.isEmpty() or bounds.width() == 0 or bounds.height() == 0:
                             node.removeChildNode(child)
                             removed_count += 1
+                        else:
+                            # 读取边框内所有像素
+                            data = child.pixelData(bounds.x(), bounds.y(), bounds.width(), bounds.height())
+                            b = data.data()
+                            # 提取所有 alpha 通道字节（索引3开始，步长为4）
+                            alphas = b[3::4]
+                            # 在 Python 3 中，使用 count 统计空字节数极其快，相当于底层的 C 循环
+                            num_transparent = alphas.count(0)
+                            num_visible = len(alphas) - num_transparent
+                            
+                            # 如果总可见像素小于20，判定为误触杂点层
+                            if num_visible < 20:
+                                node.removeChildNode(child)
+                                stray_count += 1
+                                
                     elif child.type() == "grouplayer":
-                        removed_count += remove_empty(child)
-                return removed_count
+                        res = remove_noise(child)
+                        removed_count += res[0]
+                        stray_count += res[1]
+                return removed_count, stray_count
                 
-            count = remove_empty(doc.rootNode())
+            removed_empty, removed_stray = remove_noise(doc.rootNode())
             doc.refreshProjection()
-            if count > 0:
-                self.append_message("AI", f"清理完毕，成功删除了 {count} 个完全空白的图层！")
+            if removed_empty > 0 or removed_stray > 0:
+                self.append_message("Aura", f"清理完毕！共删除 {removed_empty} 个全空图层，以及 {removed_stray} 个仅含微小杂点的多余图层。")
             else:
-                self.append_message("AI", "扫描完毕，当前文档中没有空图层哦。")
+                self.append_message("Aura", "扫描完毕，当前文档中非常干净，没有空图层或杂点图层哦。")
         except Exception as e:
-            self.append_message("系统", "删除空图层失败: {}".format(str(e)))
+            self.append_message("系统", "清理图层失败: {}".format(str(e)))
 
     def execute_resize_brush(self, direction):
         try:
@@ -234,7 +255,7 @@ class AICopilotDocker(DockWidget):
                 # 循环触发几次，因为单击一次调整幅度较小
                 for _ in range(10):
                     action.trigger()
-                self.append_message("AI", f"已帮您{'放大' if direction == 'up' else '缩小'}笔刷！")
+                self.append_message("Aura", f"已帮您{'放大' if direction == 'up' else '缩小'}笔刷！")
             else:
                 # 尝试备用动作名
                 fallback_name = 'KritaToolSizeIncrease' if direction == 'up' else 'KritaToolSizeDecrease'
@@ -242,7 +263,7 @@ class AICopilotDocker(DockWidget):
                 if fallback_action:
                     for _ in range(10):
                         fallback_action.trigger()
-                    self.append_message("AI", f"已帮您{'放大' if direction == 'up' else '缩小'}笔刷！")
+                    self.append_message("Aura", f"已帮您{'放大' if direction == 'up' else '缩小'}笔刷！")
                 else:
                     self.append_message("系统", "找不到笔刷调整动作指令，可能是 Krita 版本差异或快捷键未绑定。")
         except Exception as e:
@@ -340,7 +361,7 @@ class AICopilotDocker(DockWidget):
                 
             flat_layer.setPixelData(pixel_bytes, x, y, w, h)
             doc.refreshProjection()
-            self.append_message("AI", "铺底色完成！已在线稿层下方创建 Flatting 图层。")
+            self.append_message("Aura", "铺底色完成！已在线稿层下方创建 Flatting 图层。")
             
         except Exception as e:
             self.append_message("系统", "铺底色写回失败: {}".format(str(e)))

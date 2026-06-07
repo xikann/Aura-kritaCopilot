@@ -315,10 +315,10 @@ def chat(request: ChatRequest):
             "target_name": target_name
         }
     
-    if "删" in prompt and "空" in prompt and "图层" in prompt:
+    if "删" in prompt and any(k in prompt for k in ["空", "杂点", "没用", "多余"]):
         return {
-            "reply": "好的，正在为您扫描并删除文档中所有的空图层...",
-            "action": "delete_empty_layers"
+            "reply": "好的，正在为您扫描并清理文档中所有的空图层和极微小杂点图层...",
+            "action": "cleanup_layers"
         }
         
     if ("放大" in prompt or "大一点" in prompt) and "笔刷" in prompt:
